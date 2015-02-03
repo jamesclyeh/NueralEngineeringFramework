@@ -10,24 +10,26 @@ class Simulator:
   """Init function for the simulator
 
   Params:
-    value_range - value range of scalar prior to encoding, tuple of 2 elements
-    dx - the sampling step size for the value being encoded
+    values - list of values to be encoded
     max_firing_rate_range - max neuron firing rate range, tuple of 2 elements
     x_intercept_range - x intercept range for different neurons
     encoder_choices - possible preferred vector direction to use, will be
       selected by random
     encoders - list encoders to use
   """
-  def __init__(self, neuron_model, value_range, dx, max_firing_rate_range, \
+  def __init__(self, neuron_model, values, max_firing_rate_range, \
       x_intercept_range, encoder_choices=None, encoders=None):
     self.n = neuron_model
-    self.value_range = value_range
-    self.dx = dx
+    self.values = values
     self.max_firing_rate_range = max_firing_rate_range
     self.x_intercept_range = x_intercept_range
     self.encoder_choices = encoder_choices
     self.encoders = encoders
-    assert self.encoders or self.encoder_choices
+    assert self.encoders is not None  or \
+           self.encoder_choices is not None
+
+  def SetInput(self, values):
+    self.values = values
 
   """Simulate the response of N neurons
 
@@ -39,9 +41,8 @@ class Simulator:
     responses - the neuron responses for the values encoded
   """
   def GetNeuronResponses(self, n):
-    num_points = (self.value_range[1] - self.value_range[0]) / self.dx
-    x = np.linspace(self.value_range[0], self.value_range[1], num_points)
-    e = np.empty(x.size)
+    num_points = self.values.shape[1]
+    x = self.values
     response = []
     for i in xrange(n):
       if self.encoder_choices:
@@ -52,9 +53,9 @@ class Simulator:
       max_firing_rate = random.uniform(*self.max_firing_rate_range)
       gain, bias = self.n.GetGainAndBias(max_firing_rate, x_intercept)
       response.append(self.n.GetFiringRates(x, gain, bias, e))
-    responses = np.vstack(tuple(response)).T
+    responses = np.vstack(tuple(response))
 
-    return x, responses
+    return x, responses.T
 
   """Calculates the optimal decoder given x and neuron firing activities
 
@@ -66,12 +67,15 @@ class Simulator:
   Returns:
   d - decoders
   """
-  def GetDecoders(self, x, A, noise_std=None):
+  def GetDecoders(
+      self, x, A, noise_std=None, transformation=lambda x: x):
     if noise_std:
       A = A + np.random.normal(scale=noise_std * np.max(A), size=A.shape)
+    x = transformation(x)
     Gamma = np.dot(A.T, A)
-    Upsilon = np.dot(A.T, np.array([x]).T)
+    Upsilon = np.dot(A.T, x)
     #decoders = np.dot(np.linalg.pinv(Gamma), Upsilon)
-    decoders, residuals2, rank, s = np.linalg.lstsq(A, np.array([x]).T)
+    # Use numpy built in least square solver to improve performance
+    decoders, residuals2, rank, s = np.linalg.lstsq(A, x)
 
     return decoders
