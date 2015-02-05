@@ -1,5 +1,7 @@
 import numpy as np
 
+import pylab
+
 """Generates a Gaussian white noise signal
 
 Params:
@@ -98,6 +100,27 @@ Equation: sqrt( 1 / num_elements * sum(element^2))
 
 Params:
   xs - a series
+
+Returns:
+  RMS value of the series
 """
 def GetRMS(xs):
   return np.sqrt(np.average(xs**2))
+
+"""
+Creates a raster plot
+
+Params:
+  event_times_list - a list of event time
+  color - color of vlines
+
+Returns:
+  ax - an axis containing the raster plot
+"""
+def raster(event_times_list, color='k'):
+
+    ax = pylab.gca()
+    for ith, trial in enumerate(event_times_list):
+        pylab.vlines(trial, ith + .5, ith + 1.5, color=color)
+    pylab.ylim(.5, len(event_times_list) + .5)
+    return ax

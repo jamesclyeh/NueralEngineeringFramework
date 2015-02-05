@@ -100,7 +100,6 @@ class LIFNeuron(Neuron):
 
     return alpha, J_bias
 
-
   """Leaky Integrate and Fire neuron model
 
   Equation:
@@ -112,3 +111,20 @@ class LIFNeuron(Neuron):
     ret[xs > 1] = 1. / (self.tau_ref - self.tau_RC * np.log(1 - 1. / xs[xs > 1]))
 
     return ret
+
+  def GetTemporalResponse(self, T, dt, J, V=0):
+    num_points = J.size
+    voltage = np.zeros(num_points)
+    spikes = np.zeros(num_points)
+    ref = -1
+    voltage[0] = V
+    for i in xrange(num_points - 1):
+      if ref <= 0:
+        dV = dt / self.tau_RC * (J[i] - voltage[i])
+        voltage[i + 1] = min(1, max(0, voltage[i] + dV))
+        if voltage[i+1] == 1:
+          spikes[i + 1] = 1
+          ref = self.tau_ref
+      else:
+        ref -= dt
+    return voltage, spikes
