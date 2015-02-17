@@ -37,12 +37,32 @@ def GetGaussianPowerSpectrumNoise(T, dt, rms, bandwidth, seed=None):
 
   return signal
 
+"""Generates a Fourier coefficient series (using gaussian spectrum) that will result in
+a real signal when the inverse transform is performed
+
+coeff = N(0, np.exp(-1 * (w ** 2) / (2 * ((bandwidth * 2 * np.pi) ** 2))))
+
+The generation of the series uses the symmetric property of Fourier seires
+and generates a Hermitian symmetric series.
+
+X(w) = X(-w)*
+
+Params:
+  T - duration of signal
+  dt - time step of signal
+  limit - the maximum frequency of the Fourier coefficients
+  seed - seed to use when generating random numbers
+
+Returns:
+  Fourier coefficient series
+"""
 def GetCoefficientsForRealSignalUsingGaussianPowerSpecturm(T, dt, bandwidth, seed=None):
+  np.random.seed(seed)
   num_coefficients = int(T / dt / 2)
   frequencies = 2.0 * np.pi / T * (np.asarray(range(num_coefficients)) + 1)
   first_half = np.zeros(shape=(1, num_coefficients), dtype=complex)
   for index, w in enumerate(frequencies):
-    sigma = np.exp(-1 * (w ** 2) / (2 * (bandwidth ** 2)))
+    sigma = np.exp(-1 * (w ** 2) / (2 * ((bandwidth * 2 * np.pi) ** 2)))
     if sigma > 0.00000000001:
       coefficient = np.random.normal(0, sigma)
       coefficient += 1j * np.random.normal(0, sigma)
@@ -118,9 +138,26 @@ Returns:
   ax - an axis containing the raster plot
 """
 def raster(event_times_list, color='k'):
+  ax = pylab.gca()
+  for ith, trial in enumerate(event_times_list):
+    pylab.vlines(trial, ith + .5, ith + 1.5, color=color)
+  pylab.ylim(.5, len(event_times_list) + .5)
 
-    ax = pylab.gca()
-    for ith, trial in enumerate(event_times_list):
-        pylab.vlines(trial, ith + .5, ith + 1.5, color=color)
-    pylab.ylim(.5, len(event_times_list) + .5)
-    return ax
+  return ax
+
+"""
+Get time array
+
+Params:
+  t - time length in seconds
+  dt - time step size
+  plus_one - add one extra time step
+
+Returns:
+  time array containing t / dt (+1) elements
+"""
+def GetTimeArray(t, dt, plus_one=False):
+  if plus_one:
+    t = t + dt
+
+  return np.linspace(0, t, np.round(t / dt))

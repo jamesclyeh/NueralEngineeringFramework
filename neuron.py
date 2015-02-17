@@ -42,7 +42,6 @@ class RectifiedLinearNeuron(Neuron):
   Equation:
     a = max(J, 0)
   """
-
   def G(self, xs):
 
     return np.maximum(0, xs)
@@ -112,6 +111,20 @@ class LIFNeuron(Neuron):
 
     return ret
 
+  """Calculate the temporal response of neuron using Euler's method
+
+  Equation:
+    dV/dt = 1 / tau_RC * [RJ_m - V]
+
+  Params:
+    T - length of time
+    dt - time step
+    J - input current
+    V - initial voltage
+
+  Returns:
+    voltage, spikes
+  """
   def GetTemporalResponse(self, T, dt, J, V=0):
     num_points = J.size
     voltage = np.zeros(num_points)
