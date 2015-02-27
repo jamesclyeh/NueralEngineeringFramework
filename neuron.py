@@ -19,7 +19,7 @@ class Neuron:
   a(x) - a vector of a_i(x)
   """
   def GetFiringRates(self, xs, alpha, J_bias, e):
-      return self.G(alpha * np.dot(np.array(e), np.array(xs).T) + J_bias)
+    return self.G(alpha * np.dot(np.array(e), np.array(xs).T) + J_bias)
 
   """Alternative GetGiringRates function which output size can be non
   standard.
@@ -68,8 +68,8 @@ class LIFNeuron(Neuron):
   """Init for Leaky Integrate and Fire neuron model
 
   Params:
-    tau_ref = refactory constant
-    tau_RC = RC constant
+    tau_ref - refactory constant
+    tau_RC - RC constant
   """
   def __init__(self, tau_ref, tau_RC):
     self.tau_ref = tau_ref
@@ -77,25 +77,36 @@ class LIFNeuron(Neuron):
 
   """Get gain and bias given max firing rate and x-intercept
 
-  0 =  alpha * x_intercept + J_bias
-  max_rate = 1 / (tau_ref - tau_RC * ln(1 - 1 / (alpha + J_bias)))
+  Calculations:
+    # Firing rate is 0 when J = 1
+    1 =  alpha * x_intercept + J_bias
+    # Max firing rate @ x boundary (x_max)
+    max_rate = 1 / (tau_ref - tau_RC * ln(1 - 1 / (alpha * max_x + J_bias)))
 
-  tau_ref - tau_RC * ln(1 - 1 / (alpha + J_bias)) = 1 / max_rate
-  tau_RC * ln(1 - 1 / (alpha + J_bias)) = tau_ref - 1 / max_rate
-  ln(1 - 1 / (alpha + J_bias)) = (tau_ref - 1 / max_rate) / tau_RC
-  1 - 1 / (alpha + J_bias) = e^((tau_ref - 1 / max_rate) / tau_RC)
-  1 - e^((tau_ref - 1 / max_rate) / tau_RC) = 1 / (alpha + J_bias)
-  alpha + J_bias = 1 / (1 - e^((tau_ref - 1 / max_rate) / tau_RC))
-  J_bias = x - alpha
+    tau_ref - tau_RC * ln(1 - 1 / (alpha * max_x + J_bias)) = 1 / max_rate
+    tau_RC * ln(1 - 1 / (alpha * max_x + J_bias)) = tau_ref - 1 / max_rate
+    ln(1 - 1 / (alpha * max_x + J_bias)) = (tau_ref - 1 / max_rate) / tau_RC
+    1 - 1 / (alpha * max_x + J_bias) = e^((tau_ref - 1 / max_rate) / tau_RC)
+    1 - e^((tau_ref - 1 / max_rate) / tau_RC) = 1 / (alpha * max_x + J_bias)
+    alpha * max_x + J_bias = 1 / (1 - e^((tau_ref - 1 / max_rate) / tau_RC))
+    J_bias = x - alpha * max_x
+    # sub ^ into J = 1
+    alpha * x_intercept + x - alpha * max_x = 1
+    alpha * (x_intercept - max_x) = 1 - x
+    alpha = (1 - x) / (x_intercept - max_x)
 
-  alpha * x_intercept + x - alpha = 1
-  alpha * (x_intercept - 1) = 1 - x
-  alpha = (1 - x) / (x_intercept - 1)
+  Params:
+    max_firing_rate - maximum neuron firing rate
+    x_intercept - x value at which firing rate is 0
+    max_x - maximum value of possible x
+
+  Returns:
+    alpha (gain) and J_bias(bias) where J = alpha * x + J_bias
   """
-  def GetGainAndBias(self, max_firing_rate, x_intercept):
+  def GetGainAndBias(self, max_firing_rate, x_intercept, max_x=1.):
     x = 1. / (1. - np.exp((self.tau_ref - 1. / max_firing_rate) / self.tau_RC))
-    alpha = (1. - x) / (x_intercept - 1.)
-    J_bias = x - alpha
+    alpha = (1. - x) / (x_intercept - max_x)
+    J_bias = x - alpha * max_x
 
     return alpha, J_bias
 

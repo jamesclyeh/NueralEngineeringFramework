@@ -1,7 +1,5 @@
 import numpy as np
 
-import pylab
-
 """Generates a Gaussian white noise signal
 
 Params:
@@ -138,6 +136,7 @@ Returns:
   ax - an axis containing the raster plot
 """
 def raster(event_times_list, color='k'):
+  import pylab
   ax = pylab.gca()
   for ith, trial in enumerate(event_times_list):
     pylab.vlines(trial, ith + .5, ith + 1.5, color=color)
