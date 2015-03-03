@@ -3,7 +3,6 @@ import numpy as np
 """
 A simulator that performs utility functions simulating multiple neuron activities
 """
-
 class Simulator:
   """Calculates the optimal decoder given x and neuron firing activities
 
@@ -20,13 +19,21 @@ class Simulator:
     if noise_std:
       A = A + np.random.normal(scale=noise_std * np.max(A), size=A.shape)
     x = transformation(x)
-    Gamma = np.dot(A.T, A)
-    Upsilon = np.dot(A.T, x)
-    #decoders = np.dot(np.linalg.pinv(Gamma), Upsilon)
+    # Gamma = np.dot(A.T, A)
+    # Upsilon = np.dot(A.T, x)
+    # decoders = np.dot(np.linalg.pinv(Gamma), Upsilon)
+
     # Use numpy built in least square solver to improve performance
     decoders, residuals2, rank, s = np.linalg.lstsq(A, x)
 
     return decoders
+
+  @staticmethod
+  def FilterResponses(responses, filter_kernel):
+    filtered_spikes = np.array([
+        np.convolve(spikes, filter_kernel, mode='same')
+          for voltage, spikes in responses]).T
+    return filtered_spikes
 
   """Calculate decoders given input and temporal response
 
@@ -43,10 +50,8 @@ class Simulator:
   @staticmethod
   def GetDecodersForTemporalResponses(
       x, responses, filter_kernel, noise_std=None, transformation=lambda x:x):
-    filtered_spikes = np.array([
-        np.convolve(spikes, filter_kernel, mode='same')
-          for voltage, spikes in responses]).T
-    return filtered_spikes, Simulator.GetDecoders(x, filtered_spikes)
+    filtered_spikes = Simulator.FilterResponses(responses, filter_kernel)
+    return Simulator.GetDecoders(x, filtered_spikes, noise_std, transformation)
 
   """Calcualtes the optimal temporal decoder
 

@@ -1,3 +1,4 @@
+from bunch import Bunch
 import numpy as np
 
 """Generates a Gaussian white noise signal
@@ -160,3 +161,15 @@ def GetTimeArray(t, dt, plus_one=False):
     t = t + dt
 
   return np.linspace(0, t, np.round(t / dt))
+
+class FrozenBunch(Bunch):
+  def __init__(self, **kwargs):
+    super(FrozenBunch, self).__init__(**kwargs)
+    FrozenBunch.__setitem__ = None
+    FrozenBunch.__delitem__ = None
+    FrozenBunch.__setattr__ = None
+    FrozenBunch.__delattr__ = None
+    self.__dict__['_hash_string'] = hash(frozenset(tuple(kwargs.items())))
+
+  def __hash__(self):
+    return self._hash_string
