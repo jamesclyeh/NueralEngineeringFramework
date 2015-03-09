@@ -49,7 +49,7 @@ class Simulator:
   """
   @staticmethod
   def GetDecodersForTemporalResponses(
-      x, responses, filter_kernel, noise_std=None, transformation=lambda x:x):
+      x, responses, filter_kernel, noise_std=None, transformation=lambda x: x):
     filtered_spikes = Simulator.FilterResponses(responses, filter_kernel)
     return Simulator.GetDecoders(x, filtered_spikes, noise_std, transformation)
 

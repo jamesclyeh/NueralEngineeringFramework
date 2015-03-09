@@ -143,12 +143,13 @@ class LIFNeuron(Neuron):
     ref = -1
     voltage[0] = V
     for i in xrange(num_points - 1):
-      if ref <= 0:
-        dV = dt / self.tau_RC * (J[i] - voltage[i])
-        voltage[i + 1] = min(1, max(0, voltage[i] + dV))
-        if voltage[i+1] == 1:
-          spikes[i + 1] = 1
-          ref = self.tau_ref
-      else:
-        ref -= dt
+      dV = dt / self.tau_RC * (J[i] - voltage[i])
+      voltage[i+1] = max(0, voltage[i] + dV)
+      ref -= dt
+      voltage[i+1] *= min(1, max(0, (1 - ref / dt)))
+      if voltage[i+1] > 1:
+        overshoot = (voltage[i+1] - 1) / dV
+        voltage[i+1] = 0
+        spikes[i+1] = 1 / dt
+        ref = self.tau_ref + dt * (1 - overshoot)
     return voltage, spikes

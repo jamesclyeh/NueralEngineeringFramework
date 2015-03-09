@@ -5,6 +5,7 @@ from utils import GetTimeArray, GetGaussianWhiteNoise
 import numpy as np
 import pylab
 import random
+from sklearn.utils.extmath import cartesian
 
 """
 A simulator that performs utility functions simulating multiple neuron activities
@@ -22,7 +23,7 @@ class NeuronPopulation(Node):
     encoders - list encoders to use
   """
   def __init__(self, name, num_neurons, neuron_model, max_firing_rate_range, \
-      x_intercept_range, encoder_choices=None, encoders=None):
+      x_intercept_range, encoder_choices=None, encoders=None, dimensions=1):
     self.name = name
     self.neuron_model = neuron_model
     self.num_neurons = num_neurons
@@ -31,6 +32,7 @@ class NeuronPopulation(Node):
     self.neurons = []
     self.encoder_choices = encoder_choices
     self.encoders = encoders
+    self.dimensions = dimensions
     self.input_signal = None
     self.transformation = None
     self.decoders = None
@@ -50,21 +52,28 @@ class NeuronPopulation(Node):
   """
   def GenerateRandomNeurons(
       self, encoder_choices=None, encoders=None):
+    self.neurons = []
     for i in xrange(self.num_neurons):
       x_intercept = random.uniform(*self.x_intercept_range)
       max_firing_rate = random.uniform(*self.max_firing_rate_range)
-      encoder = encoders[i] if encoders else random.choice(self.encoder_choices)
+      encoder = encoders[i] \
+          if encoders is not None else random.choice(self.encoder_choices)
       self.neurons.append((x_intercept, max_firing_rate, encoder))
 
-  def GenerateDecoders(self, transformation):
+  def SetNumberOfNeurons(self, num_neurons):
+    self.num_neurons = num_neurons
+    self.GenerateRandomNeurons(self.encoder_choices, self.encoders)
+
+  def GenerateDecoders(self, transformation, num_points=100, noise=0.1):
     if self.transformation != transformation:
-      t = GetTimeArray(1, 0.001, True)
-      filter_kernel, kernel_time = Simulator.GetPostSynapticFilter(t, 0.005)
-      noise_signal = GetGaussianWhiteNoise(1, 0.001, 1, 5)
-      responses = self.GetTemporalNeuronResponses(noise_signal)
-      decoders = Simulator.GetDecodersForTemporalResponses(
-          noise_signal, responses, filter_kernel, transformation=transformation)
-      self.decoders = decoders
+      full_x_range = np.array([np.linspace(
+          self.x_intercept_range[0], self.x_intercept_range[1], num_points)]).T
+      full_range_input = cartesian(
+          [full_x_range.T for i in xrange(self.dimensions)])
+      x, responses = self.GetNeuronResponses(full_range_input)
+      responses_noisy = NeuronPopulation.AddNoiseToResponse(responses, noise)
+      self.decoders = \
+          Simulator.GetDecoders(x, responses_noisy, noise, transformation=transformation)
       self.transformation = transformation
 
   """Simulate the response of N neurons
@@ -119,7 +128,7 @@ class NeuronPopulation(Node):
           J = alpha * x * e + J_bias
           responses.append(self.neuron_model.GetTemporalResponse(1, 0.001, J))
       else:
-        J = alpha * x * encoder + J_bias
+        J = (alpha * np.dot(np.array(encoder), np.array(x).T) + J_bias).T
         responses.append(self.neuron_model.GetTemporalResponse(1, 0.001, J))
 
     return responses
@@ -133,11 +142,12 @@ class NeuronPopulation(Node):
   def GetOutput(self):
     if self.input_signal is None:
       raise ValueError("Node not connected to input.")
-    t = GetTimeArray(1, 0.001, True)
+    t = GetTimeArray(1, 0.001)
     filter_kernel, kernel_time = Simulator.GetPostSynapticFilter(t, 0.005)
     responses = self.GetTemporalNeuronResponses(self.input_signal)
-    #pylab.plot(t, self.input_signal)
     filtered_spikes = Simulator.FilterResponses(responses, filter_kernel)
+    #self.decoders = Simulator.GetDecodersForTemporalResponses(
+    #      self.input_signal, responses, filter_kernel, transformation=self.transformation)
     self.input_signal = None
 
     return np.dot(filtered_spikes, self.decoders)
